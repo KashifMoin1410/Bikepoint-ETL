@@ -1,0 +1,1530 @@
+{
+  "datasets": [
+    {
+      "name": "9ff04d28",
+      "displayName": "KPIs",
+      "queryLines": [
+        "SELECT\n",
+        "    COUNT(*) AS total_stations,\n",
+        "    SUM(CASE WHEN station_status = 'empty'  THEN 1 ELSE 0 END) AS currently_empty,\n",
+        "    SUM(CASE WHEN station_status = 'full'   THEN 1 ELSE 0 END) AS currently_full,\n",
+        "    SUM(CASE WHEN station_status = 'locked' THEN 1 ELSE 0 END) AS currently_locked,\n",
+        "    ROUND(AVG(occupancy_rate), 3) AS avg_network_occupancy\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "ed12ba0b",
+      "displayName": "Risk Distribution",
+      "queryLines": [
+        "SELECT\n",
+        "    availability_risk_band,\n",
+        "    COUNT(*) AS station_count,\n",
+        "    ROUND(AVG(availability_risk_score), 3) AS avg_risk_score\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "GROUP BY availability_risk_band\n",
+        "ORDER BY\n",
+        "    CASE availability_risk_band\n",
+        "        WHEN 'critical' THEN 1\n",
+        "        WHEN 'high'     THEN 2\n",
+        "        WHEN 'medium'   THEN 3\n",
+        "        WHEN 'low'      THEN 4\n",
+        "    END"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "f8584ddd",
+      "displayName": "Station Aggregated",
+      "queryLines": [
+        "SELECT\n",
+        "    bikepoint_id,\n",
+        "    station_name,\n",
+        "    place_type,\n",
+        "    latitude,\n",
+        "    longitude,\n",
+        "    nb_docks,\n",
+        "    capacity_category,\n",
+        "    snapshot_count,\n",
+        "    availability_risk_score,\n",
+        "    availability_risk_band,\n",
+        "    reliability_score,\n",
+        "    investment_priority_rank,\n",
+        "    pct_time_empty,\n",
+        "    pct_time_full,\n",
+        "    pct_time_low_bikes,\n",
+        "    pct_time_low_docks,\n",
+        "    pct_time_locked,\n",
+        "    broken_dock_rate,\n",
+        "    avg_occupancy_rate,\n",
+        "    occupancy_volatility,\n",
+        "    avg_ebike_share,\n",
+        "    CASE\n",
+        "        WHEN pct_time_locked      >= 0.20 THEN 'needs_maintenance_locked'\n",
+        "        WHEN broken_dock_rate     >= 0.20 THEN 'needs_maintenance_broken'\n",
+        "        WHEN pct_time_empty       >= 0.30 THEN 'needs_more_bikes'\n",
+        "        WHEN pct_time_full        >= 0.30 THEN 'needs_more_docks'\n",
+        "        WHEN pct_time_low_bikes   >= 0.30 THEN 'rebalance_supply'\n",
+        "        WHEN pct_time_low_docks   >= 0.30 THEN 'rebalance_capacity'\n",
+        "        ELSE 'healthy'\n",
+        "    END AS intervention_category\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "beed461a",
+      "displayName": "Current Status",
+      "queryLines": [
+        "SELECT\n",
+        "    bikepoint_id,\n",
+        "    station_name,\n",
+        "    latitude,\n",
+        "    longitude,\n",
+        "    nb_bikes,\n",
+        "    nb_empty_docks,\n",
+        "    nb_docks,\n",
+        "    station_status,\n",
+        "    capacity_category,\n",
+        "    occupancy_rate,\n",
+        "    ingestion_ts\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "23ed31fe",
+      "displayName": "Status Distribution",
+      "queryLines": [
+        "SELECT\n",
+        "    station_status,\n",
+        "    COUNT(*) AS station_count\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status\n",
+        "GROUP BY station_status\n",
+        "ORDER BY station_count DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "da3b44c3",
+      "displayName": "Least Reliable Stations",
+      "queryLines": [
+        "SELECT\n",
+        "    investment_priority_rank,\n",
+        "    station_name,\n",
+        "    capacity_category,\n",
+        "    availability_risk_band,\n",
+        "    ROUND(availability_risk_score, 2) AS availability_risk_score,\n",
+        "    ROUND(pct_time_empty, 2) AS pct_time_empty,\n",
+        "    ROUND(pct_time_full, 2) AS pct_time_full,\n",
+        "    ROUND(broken_dock_rate, 2) AS broken_dock_rate,\n",
+        "    ROUND(pct_time_low_bikes, 2) AS pct_time_low_bikes,\n",
+        "    ROUND(pct_time_low_docks, 2) AS pct_time_low_docks,\n",
+        "    snapshot_count\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "ORDER BY investment_priority_rank ASC"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "69eb78fc",
+      "displayName": "Top10 Risk Drivers",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    ROUND(pct_time_empty, 2) AS pct_time_empty,\n",
+        "    ROUND(pct_time_full, 2) AS pct_time_full,\n",
+        "    ROUND(broken_dock_rate, 2) AS broken_dock_rate,\n",
+        "    ROUND(pct_time_low_bikes, 2) AS pct_time_low_bikes,\n",
+        "    ROUND(pct_time_low_docks, 2) AS pct_time_low_docks,\n",
+        "    ROUND(availability_risk_score, 2) AS availability_risk_score,\n",
+        "    investment_priority_rank\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "ORDER BY investment_priority_rank ASC\n",
+        "LIMIT 10"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "ea1a4a07",
+      "displayName": "Current Empty Station",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    nb_bikes\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status\n",
+        "WHERE station_status = 'empty'\n",
+        "ORDER BY station_name"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "19624e49",
+      "displayName": "Current Full Station",
+      "queryLines": [
+        "SELECT\n",
+        "    ROW_NUMBER() OVER (ORDER BY station_name) AS number,\n",
+        "    station_name,\n",
+        "    nb_bikes,\n",
+        "    nb_empty_docks\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status\n",
+        "WHERE station_status = 'full'\n",
+        "ORDER BY number"
+      ]
+    },
+    {
+      "name": "7ee8dfb6",
+      "displayName": "Current Locked Station",
+      "queryLines": [
+        "SELECT\n",
+        "    ROW_NUMBER() OVER (ORDER BY station_name) AS number,\n",
+        "    station_name,\n",
+        "    nb_bikes,\n",
+        "    nb_empty_docks,\n",
+        "    nb_docks,\n",
+        "    station_status\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status\n",
+        "WHERE station_status = 'locked'\n",
+        "ORDER BY number"
+      ]
+    },
+    {
+      "name": "fd6b1b3f",
+      "displayName": "Weekday vs Weekend Occupancy",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    ROUND(weekday_avg_occupancy, 2) AS weekday_avg_occupancy,\n",
+        "    ROUND(weekend_avg_occupancy, 2) AS weekend_avg_occupancy,\n",
+        "    ROUND(weekday_avg_occupancy - weekend_avg_occupancy, 2) AS weekday_weekend_gap,\n",
+        "    availability_risk_band,\n",
+        "    capacity_category\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "WHERE weekday_avg_occupancy IS NOT NULL\n",
+        "  AND weekend_avg_occupancy IS NOT NULL\n",
+        "ORDER BY ABS(weekday_avg_occupancy - weekend_avg_occupancy) DESC\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "c3aa7923",
+      "displayName": "Morning Peak vs Evening Peak Occupancy",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    ROUND(morning_peak_avg_occupancy, 2) AS morning_peak_avg_occupancy,\n",
+        "    ROUND(evening_peak_avg_occupancy, 2) AS evening_peak_avg_occupancy,\n",
+        "    ROUND(morning_peak_avg_occupancy - evening_peak_avg_occupancy, 2) AS peak_gap,\n",
+        "    availability_risk_band,\n",
+        "    capacity_category\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "WHERE morning_peak_avg_occupancy IS NOT NULL\n",
+        "  AND evening_peak_avg_occupancy IS NOT NULL\n",
+        "ORDER BY ABS(morning_peak_avg_occupancy - evening_peak_avg_occupancy) DESC\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "ee17ff22",
+      "displayName": "Station Reliability Leaderboard",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    capacity_category,\n",
+        "    ROUND(reliability_score, 2) AS reliability_score,\n",
+        "    ROUND(availability_risk_score, 2) AS availability_risk_score,\n",
+        "    ROUND(pct_time_empty, 2) AS pct_time_empty,\n",
+        "    ROUND(pct_time_full, 2) AS pct_time_full,\n",
+        "    ROUND(broken_dock_rate, 2) AS broken_dock_rate,\n",
+        "    snapshot_count\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "ORDER BY reliability_score DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "bikepoint"
+    },
+    {
+      "name": "ff4e46eb",
+      "displayName": "Underutilised Stations",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    nb_docks,\n",
+        "    capacity_category,\n",
+        "    ROUND(avg_occupancy_rate, 2) AS avg_occupancy_rate,\n",
+        "    ROUND(pct_time_empty, 2) AS pct_time_empty,\n",
+        "    ROUND(pct_time_full, 2) AS pct_time_full,\n",
+        "    ROUND(availability_risk_score, 2) AS availability_risk_score\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "WHERE avg_occupancy_rate < 0.20\n",
+        "ORDER BY avg_occupancy_rate ASC"
+      ]
+    },
+    {
+      "name": "e0164e75",
+      "displayName": "Current Status vs Historical Risk",
+      "queryLines": [
+        "SELECT\n",
+        "    s.station_status,\n",
+        "    m.availability_risk_band,\n",
+        "    COUNT(*) AS station_count\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_current_status s\n",
+        "JOIN workspace.bikepoint.gold_bikepoint_station_aggregated_metrics m\n",
+        "    ON s.bikepoint_id = m.bikepoint_id\n",
+        "GROUP BY\n",
+        "    s.station_status,\n",
+        "    m.availability_risk_band\n",
+        "ORDER BY\n",
+        "    CASE s.station_status\n",
+        "        WHEN 'empty' THEN 1\n",
+        "        WHEN 'full' THEN 2\n",
+        "        WHEN 'locked' THEN 3\n",
+        "        WHEN 'low_bikes' THEN 4\n",
+        "        WHEN 'low_docks' THEN 5\n",
+        "        WHEN 'normal' THEN 6\n",
+        "        ELSE 7\n",
+        "    END,\n",
+        "    CASE m.availability_risk_band\n",
+        "        WHEN 'critical' THEN 1\n",
+        "        WHEN 'high' THEN 2\n",
+        "        WHEN 'medium' THEN 3\n",
+        "        WHEN 'low' THEN 4\n",
+        "        ELSE 5\n",
+        "    END"
+      ]
+    },
+    {
+      "name": "45b55d15",
+      "displayName": "Underused vs Overloaded Stations",
+      "queryLines": [
+        "SELECT\n",
+        "    station_name,\n",
+        "    nb_docks,\n",
+        "    capacity_category,\n",
+        "    ROUND(avg_occupancy_rate, 2) AS avg_occupancy_rate,\n",
+        "    ROUND(pct_time_empty, 2) AS pct_time_empty,\n",
+        "    ROUND(pct_time_full, 2) AS pct_time_full,\n",
+        "    ROUND(availability_risk_score, 2) AS availability_risk_score,\n",
+        "    availability_risk_band,\n",
+        "    investment_priority_rank,\n",
+        "\n",
+        "    CASE\n",
+        "        WHEN avg_occupancy_rate >= 0.80 THEN 'overloaded'\n",
+        "        WHEN avg_occupancy_rate <= 0.20 THEN 'underused'\n",
+        "        ELSE 'balanced'\n",
+        "    END AS utilisation_category\n",
+        "\n",
+        "FROM workspace.bikepoint.gold_bikepoint_station_aggregated_metrics\n",
+        "\n",
+        "WHERE avg_occupancy_rate IS NOT NULL"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "46ab9b33",
+      "displayName": "BikePoint Investment",
+      "layout": [
+        {
+          "widget": {
+            "name": "kpi-total-stations",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ff04d28",
+                  "fields": [
+                    {
+                      "name": "sum(total_stations)",
+                      "expression": "SUM(`total_stations`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Stations"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_stations)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "currently-empty",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ff04d28",
+                  "fields": [
+                    {
+                      "name": "sum(currently_empty)",
+                      "expression": "SUM(`currently_empty`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Empty"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(currently_empty)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "currently-full",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ff04d28",
+                  "fields": [
+                    {
+                      "name": "sum(currently_full)",
+                      "expression": "SUM(`currently_full`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Full"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(currently_full)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "currently-locked",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9ff04d28",
+                  "fields": [
+                    {
+                      "name": "sum(currently_locked)",
+                      "expression": "SUM(`currently_locked`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Locked"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(currently_locked)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "stations-risk-band",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ed12ba0b",
+                  "fields": [
+                    {
+                      "name": "availability_risk_band",
+                      "expression": "`availability_risk_band`"
+                    },
+                    {
+                      "name": "sum(station_count)",
+                      "expression": "SUM(`station_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Stations by Risk Band"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 1
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "availability_risk_band",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "natural-order"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(station_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "availability_risk_band",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "critical",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "medium",
+                        "color": "#FFEB00"
+                      },
+                      {
+                        "value": "high",
+                        "color": "#F79302"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "current-status-distribution",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "23ed31fe",
+                  "fields": [
+                    {
+                      "name": "sum(station_count)",
+                      "expression": "SUM(`station_count`)"
+                    },
+                    {
+                      "name": "station_status",
+                      "expression": "`station_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Current Status Distribution"
+              },
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(station_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "station_status",
+                  "legend": {
+                    "position": "right"
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "normal",
+                        "color": {
+                          "themeColorType": "selectionColor"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-20-highest-availability-risk-stations-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "da3b44c3",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "capacity_category",
+                      "expression": "`capacity_category`"
+                    },
+                    {
+                      "name": "availability_risk_score",
+                      "expression": "`availability_risk_score`"
+                    },
+                    {
+                      "name": "broken_dock_rate",
+                      "expression": "`broken_dock_rate`"
+                    },
+                    {
+                      "name": "pct_time_empty",
+                      "expression": "`pct_time_empty`"
+                    },
+                    {
+                      "name": "pct_time_full",
+                      "expression": "`pct_time_full`"
+                    },
+                    {
+                      "name": "pct_time_low_bikes",
+                      "expression": "`pct_time_low_bikes`"
+                    },
+                    {
+                      "name": "pct_time_low_docks",
+                      "expression": "`pct_time_low_docks`"
+                    },
+                    {
+                      "name": "availability_risk_band",
+                      "expression": "`availability_risk_band`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Highest Availability-Risk Stations"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "capacity_category"
+                  },
+                  {
+                    "fieldName": "availability_risk_score"
+                  },
+                  {
+                    "fieldName": "broken_dock_rate"
+                  },
+                  {
+                    "fieldName": "pct_time_empty"
+                  },
+                  {
+                    "fieldName": "pct_time_full"
+                  },
+                  {
+                    "fieldName": "pct_time_low_bikes"
+                  },
+                  {
+                    "fieldName": "pct_time_low_docks"
+                  },
+                  {
+                    "fieldName": "availability_risk_band"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "availability-risk-vs-station-capacity",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f8584ddd",
+                  "fields": [
+                    {
+                      "name": "availability_risk_band",
+                      "expression": "`availability_risk_band`"
+                    },
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "capacity_category",
+                      "expression": "`capacity_category`"
+                    },
+                    {
+                      "name": "pct_time_empty",
+                      "expression": "`pct_time_empty`"
+                    },
+                    {
+                      "name": "pct_time_full",
+                      "expression": "`pct_time_full`"
+                    },
+                    {
+                      "name": "broken_dock_rate",
+                      "expression": "`broken_dock_rate`"
+                    },
+                    {
+                      "name": "nb_docks",
+                      "expression": "`nb_docks`"
+                    },
+                    {
+                      "name": "availability_risk_score",
+                      "expression": "`availability_risk_score`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Availability Risk vs Station Capacity"
+              },
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "nb_docks",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "availability_risk_score",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "availability_risk_band",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "natural-order"
+                    },
+                    "mappings": [
+                      {
+                        "value": "critical",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "medium",
+                        "color": "#FFFD21"
+                      }
+                    ]
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "capacity_category"
+                  },
+                  {
+                    "fieldName": "pct_time_empty"
+                  },
+                  {
+                    "fieldName": "pct_time_full"
+                  },
+                  {
+                    "fieldName": "broken_dock_rate"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 12,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "risk-drivers-top-20-stations",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "69eb78fc",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "sum(pct_time_empty)",
+                      "expression": "SUM(`pct_time_empty`)"
+                    },
+                    {
+                      "name": "sum(pct_time_full)",
+                      "expression": "SUM(`pct_time_full`)"
+                    },
+                    {
+                      "name": "sum(broken_dock_rate)",
+                      "expression": "SUM(`broken_dock_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Risk-Driver for Top 10 Stations"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "station_name",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y"
+                    }
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(pct_time_empty)"
+                    },
+                    {
+                      "fieldName": "sum(pct_time_full)"
+                    },
+                    {
+                      "fieldName": "sum(broken_dock_rate)"
+                    }
+                  ]
+                },
+                "color": {
+                  "legend": {
+                    "position": "top"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 34,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "current-station-drilldown",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ea1a4a07",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "nb_bikes",
+                      "expression": "`nb_bikes`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Empty"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "nb_bikes"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "cu1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "19624e49",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "nb_bikes",
+                      "expression": "`nb_bikes`"
+                    },
+                    {
+                      "name": "nb_empty_docks",
+                      "expression": "`nb_empty_docks`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Full"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "nb_bikes"
+                  },
+                  {
+                    "fieldName": "nb_empty_docks"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "curr-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7ee8dfb6",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "station_status",
+                      "expression": "`station_status`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Currently Locked"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "station_status"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "weekday-vs-weekend-occupancy",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fd6b1b3f",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "sum(weekday_avg_occupancy)",
+                      "expression": "SUM(`weekday_avg_occupancy`)"
+                    },
+                    {
+                      "name": "sum(weekend_avg_occupancy)",
+                      "expression": "SUM(`weekend_avg_occupancy`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Weekday vs Weekend Occupancy"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "station_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(weekday_avg_occupancy)"
+                    },
+                    {
+                      "fieldName": "sum(weekend_avg_occupancy)"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "morning-peak-vs-evening-peak-occupancy",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c3aa7923",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "sum(morning_peak_avg_occupancy)",
+                      "expression": "SUM(`morning_peak_avg_occupancy`)"
+                    },
+                    {
+                      "name": "sum(evening_peak_avg_occupancy)",
+                      "expression": "SUM(`evening_peak_avg_occupancy`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Morning vs Evening Occupancy"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "station_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(morning_peak_avg_occupancy)"
+                    },
+                    {
+                      "fieldName": "sum(evening_peak_avg_occupancy)"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 28,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "station-reliability-leaderboard",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ee17ff22",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "capacity_category",
+                      "expression": "`capacity_category`"
+                    },
+                    {
+                      "name": "reliability_score",
+                      "expression": "`reliability_score`"
+                    },
+                    {
+                      "name": "availability_risk_score",
+                      "expression": "`availability_risk_score`"
+                    },
+                    {
+                      "name": "broken_dock_rate",
+                      "expression": "`broken_dock_rate`"
+                    },
+                    {
+                      "name": "pct_time_empty",
+                      "expression": "`pct_time_empty`"
+                    },
+                    {
+                      "name": "pct_time_full",
+                      "expression": "`pct_time_full`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Station Reliability Leaderboard"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "capacity_category"
+                  },
+                  {
+                    "fieldName": "reliability_score"
+                  },
+                  {
+                    "fieldName": "availability_risk_score"
+                  },
+                  {
+                    "fieldName": "broken_dock_rate"
+                  },
+                  {
+                    "fieldName": "pct_time_empty"
+                  },
+                  {
+                    "fieldName": "pct_time_full"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "underutilised-stations1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ff4e46eb",
+                  "fields": [
+                    {
+                      "name": "station_name",
+                      "expression": "`station_name`"
+                    },
+                    {
+                      "name": "capacity_category",
+                      "expression": "`capacity_category`"
+                    },
+                    {
+                      "name": "avg_occupancy_rate",
+                      "expression": "`avg_occupancy_rate`"
+                    },
+                    {
+                      "name": "pct_time_empty",
+                      "expression": "`pct_time_empty`"
+                    },
+                    {
+                      "name": "pct_time_full",
+                      "expression": "`pct_time_full`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Underutilised Stations"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "station_name"
+                  },
+                  {
+                    "fieldName": "capacity_category"
+                  },
+                  {
+                    "fieldName": "avg_occupancy_rate"
+                  },
+                  {
+                    "fieldName": "pct_time_empty"
+                  },
+                  {
+                    "fieldName": "pct_time_full"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 42,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "current-status-vs-historical-risk-band-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "e0164e75",
+                  "fields": [
+                    {
+                      "name": "availability_risk_band",
+                      "expression": "`availability_risk_band`"
+                    },
+                    {
+                      "name": "station_status",
+                      "expression": "`station_status`"
+                    },
+                    {
+                      "name": "sum(station_count)",
+                      "expression": "SUM(`station_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Current Status vs Historical Risk Band"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "station_status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(station_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "availability_risk_band",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "critical",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "medium",
+                        "color": "#FFF521"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 42,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
