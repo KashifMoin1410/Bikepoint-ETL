@@ -80,7 +80,6 @@ Production runs are handled by a Databricks Job that chains the four notebooks a
 | Setting | Value |
 |---------|--------|
 | **Job ID** | `917460087260830` |
-| **Run as** | `kashifmoin.1704@gmail.com` |
 | **Schedule** | Every 6 hours |
 | **Compute** | Serverless |
 | **Environment** | `bronze_ingestion_environment` (version 5) |
@@ -89,8 +88,8 @@ Production runs are handled by a Databricks Job that chains the four notebooks a
 | **Queue** | Enabled |
 | **Duration warning** | 15 minutes |
 | **Duration timeout** | 30 minutes |
-| **Notifications** | `kashifmoin.1704@gmail.com` — on failure and duration warning |
-| **Git** | Not configured |
+| **Notifications** | `kashifmoin.1410@gmail.com` — on failure and duration warning |
+
 
 To trigger a run manually from the UI: open the job in **Workflows → Jobs**, then click **Run now**.
 
